@@ -6,8 +6,12 @@ const crypto = require('crypto')
 const urlencodedParser = express.urlencoded({extended: false});
 const cookieParser = require("cookie-parser");
 const jwt = require("jsonwebtoken");
+const secret = "YOUR_SECRET_KEY"
 
+
+app.use(express.json());
 app.use(cookieParser());
+app.listen(8080)
 app.use("/image", express.static('image'))
 app.use("/script", express.static('script'))
 app.use("/css", express.static('css'))
@@ -17,19 +21,20 @@ app.get('/v1/authorization', function (req, res) {
 });
 
 const authorization = (req, res, next) => {
-    const token = req.cookies.access_token;
-    if (!token) {
+    const access_token = req.headers.authorization
+    if (!access_token) {
         return res.status(403).sendFile(__dirname + '/views/403.html');
     }
     try {
-        const bdata = jwt.verify(token, "YOUR_SECRET_KEY");
+        const bdata = jwt.verify(access_token, secret);
         req.userId = bdata.id;
         req.userRole = bdata.role;
         return next();
     } catch {
-        return res.sendStatus(403);
+        return res.status(403).sendFile(__dirname + '/views/403.html');
     }
 };
+
 app.get('/', function(req, res){
     res.sendFile(__dirname + '/views/index.html')
 });
@@ -40,15 +45,12 @@ app.post("/v1/authorization",
         let sha1 = crypto.createHash('sha1')
         let hash = sha1.update(req.body.password).digest('hex')
         req.body.password = hash
-        const token = jwt.sign({ id: 1, role: "admin" }, "YOUR_SECRET_KEY");
+        const token = jwt.sign({ id: 1, role: "admin" }, secret);
         return res
-            .cookie("access_token", token, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === "production",
-            })
             .status(200)
-            .redirect("/v1/cars")
-});
+            .send({"access_token":token})
+    });
+
 
 app.get("/v1/cars", authorization, (req, res) => {
     res.sendFile(__dirname + '/views/cars.html')
@@ -64,4 +66,3 @@ app.get('*', function(req, res){
     res.status(404).sendFile(__dirname + '/views/404.html')
 });
 
-app.listen(8080)
