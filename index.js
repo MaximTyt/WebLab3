@@ -61,8 +61,9 @@ app.post("/v1/authorization",
                 .status(200)
                 .send({"access_token":token})
         }
+        else
+            return res.status(403).sendFile(__dirname + '/views/403.html');
         });
-        return res.status(403).sendFile(__dirname + '/views/403.html');
     });
 
 
